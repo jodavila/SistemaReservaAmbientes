@@ -31,7 +31,7 @@
     <div id="scheduleTab" class="container">
         <div class="box">
             <h2>Marcar um Agendamento</h2>
-            <form onsubmit="event.preventDefault(); open_schedule_url();">
+            <form id="scheduleForm">
 
                 <label>
                     <label for="department">Departamento:</label>
@@ -74,7 +74,11 @@
                 <label for="duvida">Dúvida?</label>
                 <input type="text" id="duvida" name="duvida" placeholder="Nenhuma">
 
-                <button type="submit">Marcar um Agendamento</button>
+               <div id="reservationMessage" role="status" aria-live="polite"></div>
+                
+                <button type="submit" id="submitReservation">
+                    Solicitar agendamento
+                </button>
             </form>
         </div>
     </div>
@@ -102,6 +106,72 @@
             const formattedDateTime = new Intl.DateTimeFormat('pt-BR', options).format(now);
             document.getElementById('datetime').textContent = formattedDateTime;
         }
+
+        const API_URL = "https://SEU-BACKEND.run.app/reservas";
+        
+        const form = document.getElementById("scheduleForm");
+        const message = document.getElementById("reservationMessage");
+        const submitButton = document.getElementById("submitReservation");
+        
+        form.addEventListener("submit", async function(event) {
+            event.preventDefault();
+        
+            if (!form.reportValidity()) return;
+        
+            const dados = {
+                department: document.getElementById("department").value,
+                name: document.getElementById("name").value.trim(),
+                event: document.getElementById("event").value.trim(),
+                date: document.getElementById("date").value,
+                timei: document.getElementById("timei").value,
+                timef: document.getElementById("timef").value,
+                duvida: document.getElementById("duvida").value.trim()
+            };
+        
+            if (dados.timef <= dados.timei) {
+                message.textContent =
+                    "O horário final precisa ser posterior ao inicial.";
+                message.className = "error";
+                return;
+            }
+        
+            submitButton.disabled = true;
+            submitButton.textContent = "Verificando disponibilidade...";
+            message.textContent = "";
+        
+            try {
+                const resposta = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(dados)
+                });
+        
+                const resultado = await resposta.json();
+        
+                if (!resposta.ok) {
+                    throw new Error(resultado.message);
+                }
+        
+                message.textContent =
+                    "Reserva confirmada! O evento já está na agenda.";
+        
+                message.className = "success";
+        
+                form.reset();
+        
+            } catch (erro) {
+                message.textContent =
+                    erro.message || "Erro ao realizar o agendamento.";
+        
+                message.className = "error";
+        
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = "Solicitar agendamento";
+            }
+        });
 
          function open_schedule_url() {
             const phoneNumber = "5551995474574";
